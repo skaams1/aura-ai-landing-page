@@ -38,7 +38,7 @@ export default function Screen1Signup({ targetYear, onSuccess }: Screen1SignupPr
 
       const user = authData.user;
 
-      if (!user?.id || authData.user.identities?.length === 0) {
+      if (!user?.id || user.identities?.length === 0) {
         throw new Error("This email is already registered. Please sign in instead.");
       }
 
