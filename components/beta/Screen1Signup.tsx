@@ -37,8 +37,9 @@ export default function Screen1Signup({ targetYear, onSuccess }: Screen1SignupPr
       });
 
       const user = authData.user;
-      if (!user) {
-        throw new Error("Signup failed. Please try again.");
+
+      if (!user?.id || authData.user.identities?.length === 0) {
+        throw new Error("This email is already registered. Please sign in instead.");
       }
 
       console.log("Supabase Auth Sign Up Success. User ID:", user.id);
@@ -46,7 +47,7 @@ export default function Screen1Signup({ targetYear, onSuccess }: Screen1SignupPr
       // 2. Create row in users_profile table
       const { error: profileError } = await supabase
         .from("users_profile")
-        .insert([
+        .upsert([
           {
             id: user.id,
             first_name: firstName,
