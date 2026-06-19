@@ -4,16 +4,13 @@ import { motion, useScroll, useTransform, useSpring, useMotionTemplate, useMotio
 import { ArrowRight, CheckCircle2, ChevronDown, Sparkles, Brain, Zap, Clock, Shield, Flame, Target, Users, Plus, Minus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTilt } from "@/hooks/useTilt";
+import { useTypewriter } from "@/hooks/useTypewriter";
 import { BreathingAura } from "@/components/BreathingAura";
-
+import { VideoZoomSection } from "@/components/VideoZoomSection";
 import { AuraParticles } from "@/components/AuraParticles";
 import { RankBoostArc } from "@/components/RankBoostArc";
 import { RankReadinessCard } from "@/components/RankReadinessCard";
-import { KineticTeaser } from "@/components/KineticTeaser";
 import clsx from "clsx";
-
-
-
 
 export default function Home() {
     const shouldReduceMotion = useReducedMotion();
@@ -24,6 +21,19 @@ export default function Home() {
 
     // Hero Tilt Hook
     const { ref: tiltRef, handleMouseMove: handleTiltMove, handleMouseLeave: handleTiltLeave, style: tiltStyle } = useTilt<HTMLDivElement>();
+
+    // Typewriter State
+    const { displayedText: headlineText, isComplete: isHeadlineDone } = useTypewriter({
+        text: "Crack JEE 2027 the Aura Way",
+        speed: 40,
+        startDelay: 500
+    });
+
+    const { displayedText: punchlineText2 } = useTypewriter({
+        text: "Stop guessing. Start mastering.",
+        speed: 35,
+        startDelay: 2000
+    });
 
     useEffect(() => {
         if (shouldReduceMotion) return;
@@ -65,8 +75,8 @@ export default function Home() {
                     <a href="#preview" className="hover:text-blue-600 transition-colors">Preview</a>
                 </div>
                 <div className="flex gap-4">
-                    <a href="/app" className="bg-slate-900 text-white px-5 py-2 rounded-full text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-blue-500/10">
-                        Start Free Beta
+                    <a href="#batch" className="bg-slate-900 text-white px-5 py-2 rounded-full text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-blue-500/10">
+                        Join Waitlist
                     </a>
                 </div>
             </nav>
@@ -80,8 +90,6 @@ export default function Home() {
                     <AuraParticles />
                 </div>
 
-                {/* Live Prep Signal Widget Removed */}
-
                 <div className="container mx-auto px-4 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10 w-full isolate">
 
                     {/* TOP LEVEL RANK READINESS CARD - Overlay Z-50 */}
@@ -89,6 +97,8 @@ export default function Home() {
                     <div className="relative mt-8 md:mt-0 md:absolute md:top-1/2 md:-translate-y-1/2 md:right-4 lg:right-16 z-50 pointer-events-auto flex justify-center md:block order-last md:order-none">
                         <RankReadinessCard />
                     </div>
+
+
 
                     {/* Hero Content */}
                     <div className="space-y-8 text-center lg:text-left">
@@ -105,11 +115,18 @@ export default function Home() {
                             Coming Soon • Beta April 15
                         </motion.div>
 
-                        <div className="min-h-[160px] md:min-h-[200px] flex flex-col justify-center gap-3">
+                        <div className="min-h-[180px] md:min-h-[240px] flex flex-col justify-center gap-3">
                             {/* HEADLINE */}
                             <h1 className="text-5xl md:text-7xl font-extrabold tracking-tighter text-slate-900 leading-[1.05]">
-                                The Exam Mastery Engine.
+                                {headlineText}
+                                {!isHeadlineDone && <span className="animate-pulse text-blue-500 ml-1">|</span>}
                             </h1>
+
+                            {/* PUNCHLINE */}
+                            <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-cyan-600 to-purple-600 leading-[1.2] pb-2">
+                                {punchlineText2}
+                                {isHeadlineDone && punchlineText2.length < 31 && <span className="animate-pulse text-purple-600 ml-1">|</span>}
+                            </h2>
                         </div>
 
                         <motion.p
@@ -129,9 +146,9 @@ export default function Home() {
                         >
                             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                                 {/* Primary CTA with Glow */}
-                                <a href="/app" className="group relative px-8 py-4 rounded-full bg-slate-900 text-white font-bold text-lg hover:shadow-[0_0_30px_-5px_rgba(59,130,246,0.5)] transition-all duration-300 overflow-hidden inline-flex items-center">
+                                <a href="#batch" className="group relative px-8 py-4 rounded-full bg-slate-900 text-white font-bold text-lg hover:shadow-[0_0_30px_-5px_rgba(59,130,246,0.5)] transition-all duration-300 overflow-hidden inline-flex items-center">
                                     <span className="relative z-10 flex items-center gap-2">
-                                        Start Free Beta
+                                        Join Beta Waitlist
                                         <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                                     </span>
                                 </a>
@@ -159,7 +176,6 @@ export default function Home() {
                         <div className="absolute inset-0 z-10 w-full h-full">
                             <RankBoostArc />
                         </div>
-
                     </div>
                 </div>
             </section>
@@ -268,11 +284,8 @@ export default function Home() {
             </section>
 
             {/* Scroll Zoom Video Section (Antigravity Style) */}
-            <div id="preview" className="py-24 bg-slate-50 border-b border-slate-200 flex items-center justify-center min-h-[600px] relative overflow-hidden">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-50 via-slate-50 to-slate-50 pointer-events-none" />
-                <div className="relative z-10 scale-125 md:scale-150 transform transition-transform duration-700">
-                    <KineticTeaser />
-                </div>
+            <div id="preview">
+                <VideoZoomSection />
             </div>
 
             {/* JOIN BATCH FORM */}
