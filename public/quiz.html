@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JEE Chemistry Adaptive Quiz</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f8f6f1;
+    --surface: #ffffff;
+    --border: #e8e4dc;
+    --text: #1a1814;
+    --muted: #7a7570;
+    --accent: #2d6a4f;
+    --accent-light: #e8f5ee;
+    --danger: #c0392b;
+    --danger-light: #fdf0ef;
+    --warn: #d68910;
+    --easy: #1a7a4a;
+    --easy-bg: #eaf7ef;
+    --mid-bg: #fdf3dc;
+    --hard-bg: #fdf0ef;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+  }
+
+  .screen { display: none; width: 100%; max-width: 720px; }
+  .screen.active { display: flex; flex-direction: column; gap: 1.5rem; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+  }
+
+  h1 { font-size: 28px; font-weight: 600; letter-spacing: -0.5px; }
+  h2 { font-size: 20px; font-weight: 500; }
+  p  { color: var(--muted); line-height: 1.6; font-size: 15px; }
+
+  .badge {
+    display: inline-flex; align-items: center;
+    padding: 4px 12px; border-radius: 100px;
+    font-size: 12px; font-weight: 500; font-family: 'DM Mono', monospace;
+  }
+  .badge-easy { background: var(--easy-bg);  color: var(--easy); }
+  .badge-mid  { background: var(--mid-bg);   color: #c47a00; }
+  .badge-hard { background: var(--hard-bg);  color: var(--danger); }
+
+  .btn {
+    padding: 12px 28px; border-radius: 10px; border: none;
+    font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500;
+    cursor: pointer; transition: all 0.15s ease;
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #245c43; transform: translateY(-1px); }
+  .btn-primary:disabled { background: #aaa; cursor: not-allowed; transform: none; }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .btn-outline:hover { background: var(--bg); }
+
+  .api-input-wrap input {
+    width: 100%; padding: 12px 16px; border-radius: 10px;
+    border: 1.5px solid var(--border); font-size: 15px;
+    font-family: 'DM Sans', sans-serif; background: var(--bg);
+    color: var(--text); outline: none; transition: border 0.15s;
+  }
+  .api-input-wrap input:focus { border-color: var(--accent); }
+
+  .proctor-item {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 14px 0; border-bottom: 1px solid var(--border);
+  }
+  .proctor-item:last-child { border-bottom: none; }
+  .proctor-dot {
+    width: 11px; height: 11px; border-radius: 50%;
+    background: #ddd; flex-shrink: 0; margin-top: 3px; transition: background 0.3s;
+  }
+  .proctor-dot.ok   { background: var(--easy); }
+  .proctor-dot.warn { background: var(--warn); }
+  .proctor-dot.fail { background: var(--danger); }
+
+  .timer { font-family: 'DM Mono', monospace; font-size: 24px; font-weight: 500; letter-spacing: 1px; }
+  .timer.warn   { color: var(--warn); }
+  .timer.danger { color: var(--danger); }
+
+  .progress-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; width: 220px; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.5s ease; }
+
+  .question-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 1rem; }
+  .question-text { font-size: 17px; font-weight: 400; line-height: 1.75; }
+
+  .options { display: flex; flex-direction: column; gap: 10px; }
+  .option {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 14px 18px; border-radius: 12px;
+    border: 1.5px solid var(--border);
+    cursor: pointer; transition: all 0.15s ease;
+    font-size: 15px; background: var(--surface); line-height: 1.5;
+  }
+  .option:hover    { border-color: var(--accent); background: var(--accent-light); }
+  .option.selected {
+    border: 2px solid #4caf50;
+    background: #e8f5e9;
+  }
+  .option.disabled { cursor: default; pointer-events: none; }
+  .option-key {
+    font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500;
+    color: var(--muted); min-width: 20px; padding-top: 2px; flex-shrink: 0;
+  }
+
+  .feedback-row { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+  .feedback-text { font-size: 14px; font-weight: 500; }
+
+  .next-btn {
+    padding: 11px 26px; border-radius: 9px; border: none;
+    background: var(--accent); color: white;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: all 0.15s; opacity: 0; pointer-events: none; flex-shrink: 0;
+  }
+  .next-btn.visible { opacity: 1; pointer-events: all; }
+  .next-btn:hover   { background: #245c43; }
+
+  .warn-banner {
+    background: var(--danger-light); border: 1px solid #f5b7b1;
+    border-radius: 10px; padding: 12px 16px;
+    font-size: 13px; color: var(--danger); font-weight: 500; display: none;
+  }
+  .warn-banner.show { display: block; animation: shake 0.3s ease; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+
+  video.pv { border-radius: 8px; object-fit: cover; border: 1px solid var(--border); background: #111; display: block; }
+  .cam-wrap { position: relative; display: inline-block; }
+  .cam-dot { position: absolute; bottom: 6px; right: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--danger); border: 2px solid white; }
+  .cam-dot.live { background: var(--easy); }
+
+  .score-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; }
+  .score-cell { background: var(--bg); border-radius: 12px; padding: 1.25rem; text-align: center; }
+  .score-cell .val { font-size: 30px; font-weight: 600; font-family: 'DM Mono', monospace; }
+  .score-cell .lbl { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+  .diff-track { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 0.75rem; }
+  .diff-dot { width: 20px; height: 20px; border-radius: 50%; font-size: 9px; font-weight: 600; color: white; display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; }
+
+  .topic-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .topic-row:last-child { border-bottom: none; }
+
+  .info-row { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; font-size: 14px; color: var(--muted); }
+  .info-row span:first-child { color: var(--accent); font-weight: 600; flex-shrink: 0; }
+  hr.div { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
+</style>
+</head>
+<body>
+
+<div style="text-align: center; margin-bottom: 1rem;">
+  <button class="btn btn-outline" onclick="testAI()">Test AI Connection</button>
+</div>
+
+<div id="s-register" class="screen active">
+  <div class="card">
+    <div class="badge badge-easy" style="margin-bottom:1rem;">Student Registration</div>
+    <h1 style="margin-bottom:0.5rem;">Welcome to JEE Prep</h1>
+    <p style="margin-bottom:1.5rem;">Enter your details to start the diagnostic test.</p>
+    
+    <label style="font-size:14px; font-weight:500;">Full Name</label>
+    <div class="api-input-wrap" style="margin-top:8px; margin-bottom:16px;">
+      <input type="text" id="reg-name" placeholder="E.g. Rahul Kumar" autocomplete="off" />
+    </div>
+    
+    <label style="font-size:14px; font-weight:500;">Email Address</label>
+    <div class="api-input-wrap" style="margin-top:8px;">
+      <input type="email" id="reg-email" placeholder="rahul@example.com" autocomplete="off" />
+    </div>
+    
+    <div style="margin-top:1.5rem;">
+      <button class="btn btn-primary" onclick="registerStudent()">Start Diagnostic →</button>
+    </div>
+  </div>
+</div>
+
+<div id="s-intro" class="screen">
+  <div class="card">
+    <div class="badge badge-hard" style="margin-bottom:1rem;">JEE Chemistry · Adaptive</div>
+    <h1>Diagnostic Test</h1>
+    <p style="margin-top:8px;">30 questions · 30 minutes · AI-adjusted difficulty</p>
+    <hr class="div">
+    <div class="info-row"><span>→</span><span>Camera &amp; microphone activated throughout the test</span></div>
+    <div class="info-row"><span>→</span><span>Fullscreen mode locked — exiting logs a violation</span></div>
+    <div class="info-row"><span>→</span><span>Tab switching &amp; window blur are detected and flagged</span></div>
+    <div class="info-row"><span>→</span><span>Right-click, copy, and DevTools shortcuts are disabled</span></div>
+    <div class="info-row"><span>→</span><span>Difficulty adapts after every answer (Easy → Expert)</span></div>
+    <hr class="div">
+    <button class="btn btn-primary" onclick="show('s-setup')">Continue to Setup →</button>
+  </div>
+</div>
+
+<div id="s-setup" class="screen">
+  <div class="card">
+    <h2 style="margin-bottom:0.25rem;">Proctoring Setup</h2>
+    <p style="margin-bottom:1.5rem; font-size:13px;">Grant the required permissions before starting.</p>
+    <div class="proctor-item">
+      <div class="proctor-dot" id="dot-cam"></div>
+      <div><div style="font-weight:500;font-size:14px;">Camera access</div><div style="font-size:12px;color:var(--muted);" id="lbl-cam">Waiting…</div></div>
+    </div>
+    <div class="proctor-item">
+      <div class="proctor-dot" id="dot-mic"></div>
+      <div><div style="font-weight:500;font-size:14px;">Microphone access</div><div style="font-size:12px;color:var(--muted);" id="lbl-mic">Waiting…</div></div>
+    </div>
+    <div class="proctor-item">
+      <div class="proctor-dot warn" id="dot-fs"></div>
+      <div><div style="font-weight:500;font-size:14px;">Fullscreen lock</div><div style="font-size:12px;color:var(--muted);">Activates when quiz starts</div></div>
+    </div>
+    <div class="proctor-item">
+      <div class="proctor-dot ok"></div>
+      <div><div style="font-weight:500;font-size:14px;">Tab-switch &amp; blur detection</div><div style="font-size:12px;color:var(--muted);">Active — all violations logged with timestamps</div></div>
+    </div>
+    <div style="margin-top:1.75rem;display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-primary" id="btn-perms" onclick="requestPermissions()">Grant Camera &amp; Mic →</button>
+      <button class="btn btn-outline" onclick="beginQuiz()">Skip (demo mode)</button>
+    </div>
+  </div>
+  <div class="card" style="padding:1.25rem 1.5rem;">
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <div class="cam-wrap">
+        <video id="cam-setup" class="pv" autoplay muted playsinline style="width:128px;height:96px;"></video>
+        <div class="cam-dot" id="cdot-setup"></div>
+      </div>
+      <div>
+        <p style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px;">Camera preview</p>
+        <p style="font-size:13px;">Make sure your face is clearly visible.</p>
+        <div style="margin-top:12px;">
+          <button class="btn btn-primary" id="btn-start" onclick="launchQuiz()" disabled>Start Quiz →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="s-quiz" class="screen">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+    <div>
+      <div style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;" id="q-counter">Q 1 / 30</div>
+      <div class="progress-bar" style="margin-top:6px;"><div class="progress-fill" id="q-progress" style="width:3%;"></div></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;">
+      <div class="timer" id="timer">30:00</div>
+      <div class="cam-wrap">
+        <video id="cam-quiz" class="pv" autoplay muted playsinline style="width:72px;height:54px;"></video>
+        <div class="cam-dot" id="cdot-quiz"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="warn-banner" id="warn-banner">⚠ Violation detected!</div>
+
+  <div class="card" id="q-card">
+    <div class="question-meta">
+      <span class="badge" id="diff-badge">Medium</span>
+      <span style="font-size:13px;color:var(--muted);" id="topic-label">Chemistry</span>
+    </div>
+    <div class="question-text" id="q-text"></div>
+  </div>
+
+  <div class="options" id="opts"></div>
+
+  <div class="card" style="padding:1rem 1.5rem;">
+    <div class="feedback-row">
+      <div class="feedback-text" id="fb-text"></div>
+      <button class="next-btn" id="next-btn" onclick="nextQuestion()">Next →</button>
+    </div>
+  </div>
+</div>
+
+<div id="s-result" class="screen">
+  <div class="card">
+    <div class="badge badge-easy" style="margin-bottom:1rem;">Test Complete</div>
+    <h1 style="margin-bottom:0.5rem;">Your Results</h1>
+    <p>JEE Chemistry · Adaptive Diagnostic</p>
+  </div>
+  <div class="card">
+    <div class="score-grid">
+      <div class="score-cell"><div class="val" id="r-correct">0</div><div class="lbl">Correct</div></div>
+      <div class="score-cell"><div class="val" id="r-accuracy">0%</div><div class="lbl">Accuracy</div></div>
+      <div class="score-cell"><div class="val" id="r-diff">—</div><div class="lbl">Avg Difficulty</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2 style="font-size:16px;margin-bottom:0.5rem;">Difficulty progression</h2>
+    <p style="font-size:13px;margin-bottom:0.75rem;">Each dot = one question. Green = easy · Yellow = medium · Red = hard.</p>
+    <div class="diff-track" id="diff-track"></div>
+  </div> 
+  <div class="card">
+    <h2 style="font-size:16px;margin-bottom:1rem;">Topic performance</h2>
+    <div id="topic-bd"></div>
+  </div>
+  <div class="card" style="background:var(--bg);">
+    <p style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:6px;">Proctoring summary</p>
+    <p style="font-size:13px;" id="proctor-summary">No violations logged.</p>
+  </div>
+  <button class="btn btn-primary" onclick="restartQuiz()">Retake Quiz →</button>
+</div>
+
+<script>
+const QUESTION_BANK = [
+  /* ─── EASY (diff 1) ─────────────────────────────────────────────── */
+  { id:1,  topic:"Atomic Structure",      diff:1, text:"Which quantum number determines the shape of an orbital?", opts:["Principal (n)","Azimuthal (ℓ)","Magnetic (mₗ)","Spin (mₛ)"], ans:1 },
+  { id:2,  topic:"Periodic Table",       diff:1, text:"Which element has the highest electronegativity on the Pauling scale?", opts:["Oxygen","Nitrogen","Fluorine","Chlorine"], ans:2 },
+  { id:3,  topic:"Chemical Bonding",      diff:1, text:"Which molecule has a trigonal planar geometry?", opts:["NH₃","H₂O","BF₃","PCl₃"], ans:2 },
+  { id:4,  topic:"Thermodynamics",        diff:1, text:"At constant pressure, the heat change equals:", opts:["ΔU","ΔH","ΔG","ΔS"], ans:1 },
+  { id:5,  topic:"Mole Concept",          diff:1, text:"How many moles are present in 44 g of CO₂? (M = 44 g/mol)", opts:["0.5 mol","1 mol","2 mol","4 mol"], ans:1 },
+  { id:6,  topic:"States of Matter",      diff:1, text:"At STP, the volume occupied by 1 mole of an ideal gas is:", opts:["11.2 L","22.4 L","44.8 L","2.24 L"], ans:1 },
+  { id:7,  topic:"Redox Reactions",       diff:1, text:"In the reaction Zn + CuSO₄ → ZnSO₄ + Cu, zinc is:", opts:["Oxidised","Reduced","Neither","Acting as a catalyst"], ans:0 },
+  { id:8,  topic:"Organic Chemistry",     diff:1, text:"The IUPAC name of CH₃–CH=CH₂ is:", opts:["Propyne","Propene","Propane","Propadiene"], ans:1 },
+  { id:9,  topic:"Mole Concept",          diff:1, text:"Avogadro's number is approximately:", opts:["6.022 × 10²³","6.022 × 10²²","3.011 × 10²³","6.022 × 10²⁴"], ans:0 },
+  { id:10, topic:"Periodic Table",        diff:1, text:"Which of the following is an alkali metal?", opts:["Calcium","Magnesium","Sodium","Aluminium"], ans:2 },
+
+  /* ─── MEDIUM (diff 2) ───────────────────────────────────────────── */
+  { id:11, topic:"Chemical Equilibrium",  diff:2, text:"Le Chatelier's principle states that a system at equilibrium, when subjected to a disturbance, will:", opts:["Shift to produce more products always","Shift to counteract the disturbance","Reach a new equilibrium without shifting","Increase the rate constant"], ans:1 },
+  { id:12, topic:"Acids & Bases",         diff:2, text:"The pH of a 0.01 M HCl solution (strong acid, fully dissociated) is:", opts:["1","2","3","4"], ans:1 },
+  { id:13, topic:"Solutions",             diff:2, text:"Raoult's law applies strictly to:", opts:["Concentrated solutions","Ideal solutions","Solutions with volatile solutes only","All real solutions"], ans:1 },
+  { id:14, topic:"Chemical Kinetics",     diff:2, text:"A reaction whose rate is proportional to [A]² is of which order?", opts:["Zero order","First order","Second order","Third order"], ans:2 },
+  { id:15, topic:"Solid State",           diff:2, text:"CsCl adopts which crystal structure?", opts:["Face-centred cubic (FCC)","Body-centred cubic (BCC)","Simple cubic","Hexagonal close-packed"], ans:2 },
+  { id:16, topic:"Electrochemistry",      diff:2, text:"The standard hydrogen electrode (SHE) has an EMF of:", opts:["+1.00 V","−1.00 V","0.00 V","0.50 V"], ans:2 },
+  { id:17, topic:"Organic Chemistry",     diff:2, text:"Which reagent converts an alkene to a vicinal diol?", opts:["Ozone / Zn","Cold dilute KMnO₄","Hot conc. H₂SO₄","HBr / peroxide"], ans:1 },
+  { id:18, topic:"Chemical Bonding",      diff:2, text:"The bond angle in a water molecule is approximately:", opts:["180°","120°","109.5°","104.5°"], ans:3 },
+  { id:19, topic:"Thermodynamics",        diff:2, text:"For a process to be spontaneous at constant T and P, ΔG must be:", opts:["Zero","Positive","Negative","Equal to ΔH"], ans:2 },
+  { id:20, topic:"p-Block Elements",      diff:2, text:"The hybridisation of sulfur in SF₆ is:", opts:["sp","sp³","sp³d","sp³d²"], ans:3 },
+
+  /* ─── HARD (diff 3) ─────────────────────────────────────────────── */
+  { id:21, topic:"Chemical Kinetics",     diff:3, text:"In the Arrhenius equation k = Ae^(−Ea/RT), if temperature doubles from 300 K to 600 K with Ea = 50 kJ/mol, the rate constant approximately:", opts:["Doubles","Quadruples","Increases ~10×","Increases ~1000×"], ans:2 },
+  { id:22, topic:"Chemical Equilibrium",  diff:3, text:"For PCl₅(g) ⇌ PCl₃(g) + Cl₂(g), the relationship between Kp and Kc at temperature T is:", opts:["Kp = Kc","Kp = Kc(RT)","Kp = Kc / (RT)","Kp = Kc(RT)²"], ans:1 },
+  { id:23, topic:"Organic Mechanisms",    diff:3, text:"Markovnikov's rule governs the regioselectivity of HX addition to:", opts:["Alkynes only","Symmetric alkenes","Unsymmetric alkenes","All carbonyl compounds"], ans:2 },
+  { id:24, topic:"Electrochemistry",      diff:3, text:"At 25 °C, for a cell with E°cell = 0.34 V (2 electrons transferred), ΔG° is:", opts:["−65.7 kJ/mol","−32.9 kJ/mol","+65.7 kJ/mol","+32.9 kJ/mol"], ans:0 },
+  { id:25, topic:"Coordination Chemistry",diff:3, text:"The coordination number of cobalt in [Co(en)₂Cl₂]⁺ (en = ethylenediamine) is:", opts:["4","5","6","8"], ans:2 },
+  { id:26, topic:"Solutions",             diff:3, text:"The van 't Hoff factor (i) for K₂SO₄ assuming complete dissociation is:", opts:["1","2","3","4"], ans:2 },
+  { id:27, topic:"Solid State",           diff:3, text:"In a face-centred cubic (FCC) unit cell, the number of octahedral voids per unit cell is:", opts:["4","8","12","16"], ans:0 },
+  { id:28, topic:"Organic Chemistry",     diff:3, text:"The Reimer–Tiemann reaction introduces which functional group onto a phenol ring?", opts:["—NO₂","—CHO","—OH","—COOH"], ans:1 },
+  { id:29, topic:"Thermodynamics",        diff:3, text:"Kirchhoff's equation dΔH/dT = ΔCp relates the temperature dependence of:", opts:["Enthalpy of reaction","Gibbs free energy","Entropy change","Heat capacity at constant volume"], ans:0 },
+  { id:30, topic:"p-Block Elements",      diff:3, text:"Which oxide of nitrogen is produced when copper reacts with dilute HNO₃?", opts:["NO₂","NO","N₂O","N₂O₃"], ans:1 },
+
+  /* ─── VERY HARD (diff 4) ────────────────────────────────────────── */
+  { id:31, topic:"Coordination Chemistry",diff:4, text:"The Crystal Field Stabilisation Energy (CFSE) for a d⁶ ion in a strong octahedral field is:", opts:["−2.4 Δo","−0.4 Δo","−2.0 Δo","0"], ans:0 },
+  { id:32, topic:"Chemical Kinetics",     diff:4, text:"The half-life of a second-order reaction A → products depends on:", opts:["Only the rate constant k","Only the initial concentration [A]₀","Both k and [A]₀","Neither k nor [A]₀"], ans:2 },
+  { id:33, topic:"Organic Mechanisms",    diff:4, text:"In an SN1 reaction, the rate-determining step is:", opts:["Backside attack by nucleophile","Formation of a carbocation intermediate","Proton transfer to leaving group","Concerted displacement"], ans:1 },
+  { id:34, topic:"Chemical Bonding",      diff:4, text:"According to MO theory, the bond order of O₂⁻ (superoxide ion) is:", opts:["1.0","1.5","2.0","2.5"], ans:1 },
+  { id:35, topic:"Electrochemistry",      diff:4, text:"The Debye–Hückel limiting law is applied to calculate activity coefficients of:", opts:["Ideal gases","Dilute electrolyte solutions","Concentrated acids","Non-electrolytes"], ans:1 },
+  { id:36, topic:"Thermodynamics",        diff:4, text:"For an ideal gas expanding reversibly and adiabatically, which relation holds (γ = Cp/Cv)?", opts:["TVγ = const","TV^(γ−1) = const","T^γV = const","PV = const"], ans:1 },
+  { id:37, topic:"Atomic Structure",      diff:4, text:"The de Broglie wavelength of an electron accelerated through potential difference V is proportional to:", opts:["V","√V","1/√V","1/V"], ans:2 },
+  { id:38, topic:"Chemical Equilibrium",  diff:4, text:"At 500 K, Kc for N₂ + 3H₂ ⇌ 2NH₃ is 0.061 L² mol⁻². What is Kp? (R = 0.082 L atm mol⁻¹ K⁻¹)", opts:["1.5 × 10⁻⁵ atm⁻²","6.1 × 10⁻² atm⁻²","3.4 × 10⁻² atm⁻²","2.5 × 10⁻⁵ atm⁻²"], ans:0 },
+  { id:39, topic:"Organic Chemistry",     diff:4, text:"The major product of benzene reacting with Cl₂ in the presence of AlCl₃ is:", opts:["Cyclohexyl chloride","Chlorobenzene","Benzyl chloride","Dichlorobenzene"], ans:1 },
+  { id:40, topic:"p-Block Elements",      diff:4, text:"Correct order of acidic strength for Group 16 hydrides:", opts:["H₂O > H₂S > H₂Se > H₂Te","H₂Te > H₂Se > H₂S > H₂O","H₂S > H₂O > H₂Se > H₂Te","H₂Se > H₂Te > H₂S > H₂O"], ans:1 },
+
+  /* ─── EXPERT (diff 5) ───────────────────────────────────────────── */
+  { id:41, topic:"Organic Mechanisms",    diff:5, text:"In a Diels-Alder reaction, the diene must adopt which conformation to react?", opts:["s-trans","s-cis","gauche","eclipsed"], ans:1 },
+  { id:42, topic:"Chemical Kinetics",     diff:5, text:"For a pre-equilibrium mechanism A ⇌ B (fast, K) followed by B → P (slow, k₂), the observed rate law is:", opts:["rate = k₂[A]","rate = Kk₂[A]","rate = k₂[B]²","rate = K[A][B]"], ans:1 },
+  { id:43, topic:"Thermodynamics",        diff:5, text:"The Gibbs–Duhem equation at constant T and P is:", opts:["Σnᵢdμᵢ = 0","ΣnᵢμᵢdT = 0","dG = VdP − SdT","ΣdnᵢRT = 0"], ans:0 },
+  { id:44, topic:"Coordination Chemistry",diff:5, text:"In the trans-influence series for square planar Pt(II) complexes, correct order of decreasing trans-influence is:", opts:["CN⁻ > CO > H⁻ > Cl⁻","H⁻ > CN⁻ > CO > Cl⁻","CO > H⁻ > CN⁻ > Cl⁻","Cl⁻ > CO > H⁻ > CN⁻"], ans:0 },
+  { id:45, topic:"Solid State",           diff:5, text:"In a rock-salt (NaCl) structure, the radius ratio (r⁺/r⁻) range that stabilises this structure is:", opts:["0.155–0.225","0.225–0.414","0.414–0.732","0.732–1.000"], ans:2 },
+  { id:46, topic:"Electrochemistry",      diff:5, text:"The Butler–Volmer equation describes the relationship between:", opts:["EMF and temperature","Overpotential and current density","Conductivity and concentration","Activity and molality"], ans:1 },
+  { id:47, topic:"Organic Chemistry",     diff:5, text:"Birch reduction of anisole (methoxybenzene) with Na/NH₃/ROH gives predominantly:", opts:["1-methoxy-1,4-cyclohexadiene","2,5-dihydroanisole (1-methoxy-2,5-cyclohexadiene)","Cyclohexanone","3-methoxycyclohex-1-ene"], ans:1 },
+  { id:48, topic:"Atomic Structure",      diff:5, text:"In relativistic contraction of orbitals in heavy elements, which orbital type contracts the most?", opts:["p orbitals","d orbitals","f orbitals","s orbitals"], ans:3 },
+  { id:49, topic:"Chemical Bonding",      diff:5, text:"According to Walsh correlation diagrams, AH₂ molecules prefer bent geometry when the HOMO is:", opts:["1a₁ (σ bonding)","2a₁ (mainly s of A)","1b₂ (σ bonding)","1b₁ (non-bonding p of A)"], ans:3 },
+  { id:50, topic:"Thermodynamics",        diff:5, text:"The Sackur–Tetrode equation calculates the standard molar entropy of a monatomic ideal gas. Which factor does NOT appear in it?", opts:["Temperature","Atomic mass","Volume","Enthalpy of formation"], ans:3 },
+];
+
+/* ══════════════════════════════════════
+    CONSTANTS
+══════════════════════════════════════ */
+const TOTAL_Q  = 30;
+const TOTAL_S  = 1800;
+const DLABELS  = ['','Easy','Medium','Hard','Very Hard','Expert'];
+const DCLASSES = ['','badge-easy','badge-mid','badge-hard','badge-hard','badge-hard'];
+const DCOLORS  = ['','#1a7a4a','#c47a00','#d65a00','#b33a1a','#7a1a1a'];
+let loadingNext = false;
+let nextQuestionCache = null;
+
+/* ══════════════════════════════════════
+    STATE
+══════════════════════════════════════ */
+let S = newState();
+function newState(keepStream) {
+  return {
+    qIdx:0, diff:2, answered:false, score:0,
+    secs:TOTAL_S, timerRef:null,
+    violations:0, vLog:[], diffHist:[], topicMap:{},
+    usedIds:new Set(), stream:keepStream||null,
+    
+    currentQStartTime: 0, 
+    questionLogs: [],
+    studentName: '',   
+    studentEmail: '',
+    sessionId: 'sess_' + Math.random().toString(36).substr(2, 9) // Initialize immediately to avoid testAI crashes
+  };
+}
+
+/* ══════════════════════════════════════
+    HELPERS
+══════════════════════════════════════ */
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+function setDot(id, cls) { document.getElementById(id).className = 'proctor-dot ' + cls; }
+
+/* ══════════════════════════════════════
+    REGISTRATION
+══════════════════════════════════════ */
+function registerStudent() {
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  
+  if(!name || !email || !email.includes('@')) {
+    alert('Please enter a valid name and email address.');
+    return;
+  }
+  
+  S.studentName = name;
+  S.studentEmail = email;
+  show('s-intro');
+}
+
+/* ══════════════════════════════════════
+    PERMISSIONS
+══════════════════════════════════════ */
+async function requestPermissions() {
+  const btn = document.getElementById('btn-perms');
+  btn.disabled = true; btn.textContent = 'Requesting…';
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
+    S.stream = stream;
+    setDot('dot-cam','ok'); document.getElementById('lbl-cam').textContent = 'Camera granted ✓';
+    setDot('dot-mic','ok'); document.getElementById('lbl-mic').textContent = 'Microphone granted ✓';
+    document.getElementById('cam-setup').srcObject = stream;
+    document.getElementById('cdot-setup').className = 'cam-dot live';
+    document.getElementById('btn-start').disabled = false;
+    btn.textContent = 'Permissions granted ✓';
+  } catch(e) {
+    setDot('dot-cam','fail'); document.getElementById('lbl-cam').textContent = 'Camera denied';
+    setDot('dot-mic','fail'); document.getElementById('lbl-mic').textContent = 'Microphone denied';
+    btn.disabled = false; btn.textContent = 'Retry Permissions';
+  }
+}
+
+async function launchQuiz() {
+  try { await document.documentElement.requestFullscreen(); setDot('dot-fs','ok'); }
+  catch(e) { setDot('dot-fs','warn'); }
+  beginQuiz();
+}
+
+function beginQuiz() {
+  show('s-quiz');
+  if (S.stream) {
+    document.getElementById('cam-quiz').srcObject = S.stream;
+    document.getElementById('cdot-quiz').className = 'cam-dot live';
+  }
+  setupAntiCheat();
+  startTimer();
+  loadQuestion();
+}
+
+/* ══════════════════════════════════════
+    ANTI-CHEAT
+══════════════════════════════════════ */
+function setupAntiCheat() {
+  document.addEventListener('visibilitychange', onVis);
+  document.addEventListener('fullscreenchange', onFs);
+  window.addEventListener('blur', onBlur);
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('copy',  e => e.preventDefault());
+  document.addEventListener('cut',   e => e.preventDefault());
+  document.addEventListener('keydown', onKey);
+}
+function onVis()  { if (document.hidden && S.qIdx > 0) logV('tab_switch'); }
+function onBlur() { if (S.qIdx > 0) logV('window_blur'); }
+function onFs()   {
+  if (!document.fullscreenElement && S.qIdx > 0) {
+    logV('fullscreen_exit');
+    document.documentElement.requestFullscreen().catch(() => {});
+  }
+}
+function onKey(e) {
+  if (e.key === 'F12' ||
+      (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(e.key)) ||
+      (e.ctrlKey && e.key === 'U')) e.preventDefault();
+}
+function logV(type) {
+  S.violations++;
+  S.vLog.push({ type, time: new Date().toLocaleTimeString(), q: S.qIdx + 1 });
+  const labels = { tab_switch:'Tab switch', window_blur:'Window focus lost', fullscreen_exit:'Fullscreen exited' };
+  const b = document.getElementById('warn-banner');
+  b.textContent = `⚠ ${labels[type]||'Violation'} — violation #${S.violations} logged.`;
+  b.className = 'warn-banner show';
+  setTimeout(() => { b.className = 'warn-banner'; }, 5000);
+}
+
+/* ══════════════════════════════════════
+    TIMER
+══════════════════════════════════════ */
+function startTimer() {
+  S.timerRef = setInterval(() => {
+    S.secs--;
+    const m = Math.floor(S.secs / 60), s = S.secs % 60;
+    const el = document.getElementById('timer');
+    el.textContent = `${m}:${s.toString().padStart(2,'0')}`;
+    el.className = 'timer' + (S.secs < 300 ? ' danger' : S.secs < 600 ? ' warn' : '');
+    if (S.secs <= 0) { clearInterval(S.timerRef); endQuiz(); }
+  }, 1000);
+}
+
+/* ══════════════════════════════════════
+    ADAPTIVE QUESTION PICKER (FALLBACK)
+══════════════════════════════════════ */
+function pickQuestion(targetDiff) {
+  const d = Math.max(1, Math.min(5, targetDiff));
+  let pool = QUESTION_BANK.filter(q => q.diff === d && !S.usedIds.has(q.id));
+  if (!pool.length) pool = QUESTION_BANK.filter(q => Math.abs(q.diff - d) <= 1 && !S.usedIds.has(q.id));
+  if (!pool.length) pool = QUESTION_BANK.filter(q => !S.usedIds.has(q.id));
+  if (!pool.length) { S.usedIds.clear(); pool = QUESTION_BANK.filter(q => q.diff === d); }
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/* ══════════════════════════════════════
+    LOAD QUESTION
+══════════════════════════════════════ */
+async function loadQuestion() {
+  let aiQ;
+
+  try {
+    const response = await fetch(`http://127.0.0.1:8000/generate-question?difficulty=${S.diff}&session_id=${S.sessionId}`);
+    aiQ = await response.json();
+  } catch (e) {
+    console.error("AI Generation failed, falling back to local pool", e);
+    const fallback = pickQuestion(S.diff);
+    aiQ = { topic: fallback.topic, question: fallback.text, options: fallback.opts, answer: fallback.ans };
+  }
+
+  const q = {
+    id: Date.now(),
+    topic: aiQ.topic || "General Chemistry",
+    diff: S.diff,
+    text: aiQ.question,
+    opts: aiQ.options,
+    ans: aiQ.answer
+  };
+
+  S.currentQ = q;
+  S.usedIds.add(q.id);
+  S.diffHist.push(S.diff);
+  S.answered = false;
+
+  if (!S.topicMap[q.topic]) S.topicMap[q.topic] = { correct: 0, total: 0 };
+  S.topicMap[q.topic].total++;
+
+  document.getElementById('q-counter').textContent = `Q ${S.qIdx + 1} / ${TOTAL_Q}`;
+  document.getElementById('q-progress').style.width = `${((S.qIdx + 1) / TOTAL_Q) * 100}%`;
+
+  const badge = document.getElementById('diff-badge');
+  badge.textContent = DLABELS[S.diff];
+  badge.className   = 'badge ' + DCLASSES[S.diff];
+  document.getElementById('topic-label').textContent = q.topic;
+  document.getElementById('q-text').textContent      = q.text;
+
+  const opts = document.getElementById('opts');
+  opts.innerHTML = '';
+  q.opts.forEach((o, i) => {
+    const d = document.createElement('div');
+    d.className = 'option';
+    d.innerHTML = `<span class="option-key">${String.fromCharCode(65 + i)}</span><span>${o}</span>`;
+    d.addEventListener('click', () => {
+      if (S.answered) return;
+      document.querySelectorAll('.option').forEach(x => x.classList.remove('selected'));
+      d.classList.add('selected');
+      selectAnswer(i, q.ans, q.diff, q.topic);
+    });
+    opts.appendChild(d);
+  });
+
+  document.getElementById('fb-text').textContent = '';
+  document.getElementById('fb-text').className   = 'feedback-text';
+  document.getElementById('next-btn').className  = 'next-btn';
+  
+  S.currentQStartTime = Date.now();
+}
+
+/* ══════════════════════════════════════
+    PRELOAD QUESTION CACHE
+══════════════════════════════════════ */
+async function preloadQuestion() {
+  if (S.qIdx + 1 >= TOTAL_Q || loadingNext) return;
+  loadingNext = true;
+  try {
+    const response = await fetch(`http://127.0.0.1:8000/generate-question?difficulty=${S.diff}&session_id=${S.sessionId}`);
+    nextQuestionCache = await response.json();
+  } catch (e) {
+    nextQuestionCache = null;
+  } finally {
+    loadingNext = false;
+  }
+}
+
+/* ══════════════════════════════════════
+    ANSWER SELECTION
+══════════════════════════════════════ */
+function selectAnswer(sel, correct, diff, topic) {
+  if (S.answered) return;
+  S.answered = true;
+
+  const timeTaken = (Date.now() - S.currentQStartTime) / 1000;
+
+  document.querySelectorAll('.option').forEach((el) => {
+    if (!el.classList.contains('selected')) {
+      el.className = 'option disabled';
+    } else {
+      el.className = 'option selected disabled';
+    }
+  });
+
+  const isOk = sel === correct;
+  const fb = document.getElementById('fb-text');
+
+  fb.textContent = '';
+  fb.className = 'feedback-text';
+
+  if (isOk) {
+    S.score++;
+    S.topicMap[topic].correct++;
+    S.diff = Math.min(5, diff + 1);
+  } else {
+    S.diff = Math.max(1, diff - 1);
+  }
+
+  S.questionLogs.push({
+    q_number: S.qIdx + 1,
+    topic: topic,
+    difficulty: diff,
+    is_correct: isOk,
+    time_taken: timeTaken
+  });
+
+  document.getElementById('next-btn').className = 'next-btn visible';
+}
+
+/* ══════════════════════════════════════
+    NEXT QUESTION
+══════════════════════════════════════ */
+async function nextQuestion() {
+  document.getElementById('next-btn').disabled = true;
+  S.qIdx++;
+
+  if (S.qIdx >= TOTAL_Q) {
+    endQuiz();
+    return;
+  }
+
+  nextQuestionCache = null; 
+  await loadQuestion();
+  
+  document.getElementById('next-btn').disabled = false;
+}
+/* ══════════════════════════════════════
+    END QUIZ & SUBMIT TO BACKEND
+══════════════════════════════════════ */
+async function endQuiz() {
+  clearInterval(S.timerRef);
+  document.removeEventListener('visibilitychange', onVis);
+  document.removeEventListener('fullscreenchange', onFs);
+  window.removeEventListener('blur', onBlur);
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  if (S.stream) S.stream.getTracks().forEach(t => t.stop());
+
+  const total = S.qIdx;
+  
+  const payload = {
+    student_name: S.studentName,
+    student_email: S.studentEmail,
+    session_id: S.sessionId,
+    session_data: {
+      score: S.score,
+      total_questions: total,
+      violations: S.violations
+    },
+    question_logs: S.questionLogs
+  };
+
+  try {
+    const response = await fetch('http://127.0.0.1:8000/api/submit-quiz', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    
+    const analysis = await response.json();
+    console.log("Analytics received from backend:", analysis);
+  } catch(e) {
+    console.error("Failed to post to backend. Check if FastAPI is running.", e);
+  }
+
+  show('s-result');
+
+  const acc   = total ? Math.round((S.score / total) * 100) : 0;
+  const avg   = total ? (S.diffHist.reduce((a,b) => a+b, 0) / total).toFixed(1) : '—';
+
+  document.getElementById('r-correct').textContent  = S.score;
+  document.getElementById('r-accuracy').textContent = acc + '%';
+  document.getElementById('r-diff').textContent     = avg;
+
+  const track = document.getElementById('diff-track');
+  track.innerHTML = '';
+  S.diffHist.forEach((d, i) => {
+    const dot = document.createElement('div');
+    dot.className        = 'diff-dot';
+    dot.style.background = DCOLORS[d];
+    dot.title            = `Q${i+1}: ${DLABELS[d]}`;
+    dot.textContent      = d;
+    track.appendChild(dot);
+  });
+
+  const bd = document.getElementById('topic-bd');
+  bd.innerHTML = '';
+  Object.entries(S.topicMap).forEach(([topic, {correct, total:t}]) => {
+    const pct   = t ? Math.round((correct / t) * 100) : 0;
+    const color = pct >= 70 ? 'var(--easy)' : pct >= 40 ? 'var(--warn)' : 'var(--danger)';
+    const row   = document.createElement('div');
+    row.className = 'topic-row';
+    row.innerHTML = `<span style="font-weight:500;">${topic}</span>
+      <span style="font-family:'DM Mono',monospace;font-size:13px;color:${color};">${correct}/${t} (${pct}%)</span>`;
+    bd.appendChild(row);
+  });
+
+  const ps = document.getElementById('proctor-summary');
+  if (S.violations === 0) {
+    ps.textContent = 'No violations detected. Clean attempt ✓';
+    ps.style.color = 'var(--easy)';
+  } else {
+    ps.innerHTML = `<strong style="color:var(--danger)">${S.violations} violation(s) logged:</strong><br>` +
+      S.vLog.map(v => `· ${v.type.replace('_',' ')} at Q${v.q} (${v.time})`).join('<br>');
+  }
+}
+
+/* ══════════════════════════════════════
+    RESTART
+══════════════════════════════════════ */
+function restartQuiz() {
+  clearInterval(S.timerRef);
+  S = newState(S.stream);
+  show('s-register');
+}
+
+async function testAI() {
+  try {
+    const response = await fetch(`http://127.0.0.1:8000/generate-question?difficulty=3&session_id=${S.sessionId}`);
+    const data = await response.json();
+    console.log(data);
+    alert("Question generated: " + data.question);
+  } catch (e) {
+    console.error(e);
+    alert("Failed to connect to backend server.");
+  }
+}
+</script>
+</body>
+</html>
