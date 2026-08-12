@@ -10,10 +10,10 @@ from pydantic import BaseModel
 from typing import Optional, List
 import uvicorn
 
-from vector_db import get_vector_db, VectorDBService
-from llm_service import get_llm_service
-from data_processor import NCERTDataProcessor
-from config import Config
+from .vector_db import get_vector_db, VectorDBService
+from .llm_service import get_llm_service
+from .data_processor import NCERTDataProcessor
+from .config import Config
 from fastapi import Query
 import json
 import re
